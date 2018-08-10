@@ -6,8 +6,9 @@ extern crate quote;
 extern crate heck;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenTree as TokenTree2, TokenStream as TokenStream2};
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{DeriveInput, Ident, Type, Attribute, Fields, Meta};
+use quote::ToTokens;
 use heck::CamelCase;
 
 #[proc_macro_derive(FieldType, attributes(field_enums, field_type, field_enums_derive, field_type_derive))]
@@ -181,34 +182,34 @@ fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ide
 }
 
 fn has_skip_attr(attr: &Attribute, attr_names: &[&str]) -> bool {
-    if attr.path.segments
-        .first()
-        .map(|segment| {
-            let name = &segment.value().ident.to_string();
+    attr.interpret_meta()
+        .and_then(|meta| {
             for attr_name in attr_names {
-                if name == attr_name {
-                    return true;
+                if meta.name() == attr_name {
+                    return Some(meta);
                 }
             }
-            false
-        }).is_some()
-    {
-        attr.tts.clone().into_iter()
-            .next()
-            .map(|tt| check_skip(&tt))
-            .unwrap_or(false)
-    } else {
-        false
-    }
-}
+            None
+        })
+        .map(|meta| {
+            let value = match meta {
+                Meta::List(ref list) => list.nested.first()
+                    .expect("Attribute value can't be empty")
+                    .into_value()
+                    .clone()
+                    .into_token_stream()
+                    .to_string(),
 
-fn check_skip(tt: &TokenTree2) -> bool {
-    match tt {
-        TokenTree2::Ident(i) if i == "skip" => true,
-        TokenTree2::Ident(i) => panic!("Unknown attribute identifier `{}`", i),
-        TokenTree2::Group(g) => g.stream().into_iter().next()
-            .map(|tt| check_skip(&tt))
-            .unwrap_or(false),
-        _ => false,
-    }
+                Meta::NameValue(ref name_value) => name_value.lit
+                    .clone()
+                    .into_token_stream()
+                    .to_string(),
+
+                _ => panic!("Unknown attribute value, only `skip` allowed."),
+            };
+            if value != "skip" && value.find("\"skip\"").is_none() {
+                panic!("Unknown attribute value `{}`, only `skip` allowed.", value);
+            }
+        })
+        .is_some()
 }

@@ -1,7 +1,7 @@
+#![allow(dead_code)]
+
 #[macro_use]
 extern crate field_enums;
-
-#[allow(dead_code)]
 
 #[derive(FieldName)]
 struct Test {
@@ -9,6 +9,8 @@ struct Test {
     second_field: Option<String>,
     #[field_name(skip)]
     third: bool,
+    #[field_name = "skip"]
+    fourth: bool,
 }
 
 #[derive(FieldName)]
@@ -70,6 +72,7 @@ fn into_field_name() {
         first: 1,
         second_field: Some("test".to_string()),
         third: true,
+        fourth: true,
     };
     let fields: [TestFieldName; 2] = (&test).into();
     assert!(match fields {
