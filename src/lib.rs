@@ -6,16 +6,17 @@ extern crate quote;
 extern crate heck;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenTree};
-use syn::{DeriveInput, Ident, Type, Attribute, Fields};
+use proc_macro2::{Span, TokenTree as TokenTree2, TokenStream as TokenStream2};
+use syn::{DeriveInput, Ident, Type, Attribute, Fields, Meta};
 use heck::CamelCase;
 
-#[proc_macro_derive(FieldType, attributes(field_enums, field_type))]
+#[proc_macro_derive(FieldType, attributes(field_enums, field_type, field_enums_derive, field_type_derive))]
 pub fn field_type(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = &ast.ident;
     let vis = &ast.vis;
     let enum_ty = Ident::new(&(ty.to_string() + "FieldType"), Span::call_site());
+    let derive = get_enum_derive(&ast.attrs, &["field_enums_derive", "field_type_derive"], quote! {});
 
     let fields = filter_fields(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
@@ -49,6 +50,7 @@ pub fn field_type(input: TokenStream) -> TokenStream {
         });
 
     let tokens = quote! {
+        #derive
         #vis enum #enum_ty {
             #(#field_type_variants),*
         }
@@ -63,12 +65,14 @@ pub fn field_type(input: TokenStream) -> TokenStream {
     tokens.into()
 }
 
-#[proc_macro_derive(FieldName, attributes(field_enums, field_name))]
+#[proc_macro_derive(FieldName, attributes(field_enums, field_name, field_enums_derive, field_name_derive))]
 pub fn field_name(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = &ast.ident;
     let vis = &ast.vis;
     let enum_ty = Ident::new(&(ty.to_string() + "FieldName"), Span::call_site());
+    let derive = get_enum_derive(&ast.attrs, &["field_enums_derive", "field_name_derive"],
+                            quote! { #[derive(Debug, PartialEq, Eq, Clone, Copy)] });
 
     let fields = filter_fields(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
@@ -110,7 +114,7 @@ pub fn field_name(input: TokenStream) -> TokenStream {
         });
 
     let tokens = quote! {
-        #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+        #derive
         #vis enum #enum_ty {
             #(#field_name_variants),*
         }
@@ -137,6 +141,26 @@ pub fn field_name(input: TokenStream) -> TokenStream {
     tokens.into()
 }
 
+fn get_enum_derive(attrs: &[Attribute], derive_attr_names: &[&str], default: TokenStream2) -> TokenStream2 {
+    attrs.iter()
+        .filter_map(|attr| attr.interpret_meta()
+            .and_then(|meta| {
+                for attr_name in derive_attr_names {
+                    if meta.name() == attr_name {
+                        if let Meta::List(mut meta_list) = meta {
+                            meta_list.ident = Ident::new("derive", Span::call_site());
+                            return Some(meta_list);
+                        }
+                    }
+                }
+                None
+            })
+        )
+        .next()
+        .map(|meta_list| quote! { #[#meta_list] })
+        .unwrap_or(default)
+}
+
 fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ident)> {
     fields.iter()
         .filter_map(|field| {
@@ -157,9 +181,10 @@ fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ide
 }
 
 fn has_skip_attr(attr: &Attribute, attr_names: &[&str]) -> bool {
-    if attr.path.segments.iter()
-        .find(|segment| {
-            let name = &segment.ident.to_string();
+    if attr.path.segments
+        .first()
+        .map(|segment| {
+            let name = &segment.value().ident.to_string();
             for attr_name in attr_names {
                 if name == attr_name {
                     return true;
@@ -177,11 +202,11 @@ fn has_skip_attr(attr: &Attribute, attr_names: &[&str]) -> bool {
     }
 }
 
-fn check_skip(tt: &TokenTree) -> bool {
+fn check_skip(tt: &TokenTree2) -> bool {
     match tt {
-        TokenTree::Ident(i) if i == "skip" => true,
-        TokenTree::Ident(i) => panic!("Unknown attribute identifier `{}`", i),
-        TokenTree::Group(g) => g.stream().into_iter().next()
+        TokenTree2::Ident(i) if i == "skip" => true,
+        TokenTree2::Ident(i) => panic!("Unknown attribute identifier `{}`", i),
+        TokenTree2::Group(g) => g.stream().into_iter().next()
             .map(|tt| check_skip(&tt))
             .unwrap_or(false),
         _ => false,
