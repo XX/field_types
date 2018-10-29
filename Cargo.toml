@@ -1,12 +1,11 @@
 [package]
-name = "field_enums"
-version = "0.1.0"
+name = "field_types"
+version = "0.2.0"
 authors = ["XX <freecoder.xx@gmail.com>"]
 
 [dependencies]
-proc-macro2 = "0.4"
 quote = "0.6"
-syn = "0.14"
+syn = "0.15"
 heck = "0.3"
 
 [lib]

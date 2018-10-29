@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-#[macro_use]
-extern crate field_enums;
+extern crate field_types;
+
+use field_types::FieldName;
 
 #[derive(FieldName)]
 struct Test {
@@ -14,15 +15,15 @@ struct Test {
 }
 
 #[derive(FieldName)]
-#[field_enums_derive(Debug, Clone, PartialEq)]
-struct EnumsDerive {
+#[field_types_derive(Debug, Clone, PartialEq)]
+struct TestTypesDerive {
     first: i32,
     second: bool,
 }
 
 #[derive(FieldName)]
 #[field_name_derive(Debug, Clone, PartialEq)]
-struct NameDerive {
+struct TestNameDerive {
     first: i32,
     second: bool,
 }
@@ -36,18 +37,18 @@ fn full_field_name_variants() {
         TestFieldName::SecondField => (),
     }
 
-    let _field = EnumsDeriveFieldName::First;
-    let field = EnumsDeriveFieldName::Second;
+    let _field = TestTypesDeriveFieldName::First;
+    let field = TestTypesDeriveFieldName::Second;
     match field {
-        EnumsDeriveFieldName::First => (),
-        EnumsDeriveFieldName::Second => (),
+        TestTypesDeriveFieldName::First => (),
+        TestTypesDeriveFieldName::Second => (),
     }
 
-    let _field = NameDeriveFieldName::First;
-    let field = NameDeriveFieldName::Second;
+    let _field = TestNameDeriveFieldName::First;
+    let field = TestNameDeriveFieldName::Second;
     match field {
-        NameDeriveFieldName::First => (),
-        NameDeriveFieldName::Second => (),
+        TestNameDeriveFieldName::First => (),
+        TestNameDeriveFieldName::Second => (),
     }
 }
 
@@ -57,13 +58,13 @@ fn derive_field_name() {
     assert_eq!(TestFieldName::First, name);
     assert_ne!(TestFieldName::SecondField, name);
 
-    let name = EnumsDeriveFieldName::First.clone();
-    assert_eq!(EnumsDeriveFieldName::First, name);
-    assert_ne!(EnumsDeriveFieldName::Second, name);
+    let name = TestTypesDeriveFieldName::First.clone();
+    assert_eq!(TestTypesDeriveFieldName::First, name);
+    assert_ne!(TestTypesDeriveFieldName::Second, name);
 
-    let name = EnumsDeriveFieldName::Second.clone();
-    assert_eq!(EnumsDeriveFieldName::Second, name);
-    assert_ne!(EnumsDeriveFieldName::First, name);
+    let name = TestTypesDeriveFieldName::Second.clone();
+    assert_eq!(TestTypesDeriveFieldName::Second, name);
+    assert_ne!(TestTypesDeriveFieldName::First, name);
 }
 
 #[test]
@@ -80,13 +81,13 @@ fn into_field_name() {
         _ => false,
     });
 
-    let test = EnumsDerive {
+    let test = TestTypesDerive {
         first: 1,
         second: true,
     };
-    let fields: [EnumsDeriveFieldName; 2] = (&test).into();
-    assert_eq!(EnumsDeriveFieldName::First, fields[0]);
-    assert_eq!(EnumsDeriveFieldName::Second, fields[1]);
+    let fields: [TestTypesDeriveFieldName; 2] = (&test).into();
+    assert_eq!(TestTypesDeriveFieldName::First, fields[0]);
+    assert_eq!(TestTypesDeriveFieldName::Second, fields[1]);
 }
 
 #[test]

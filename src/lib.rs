@@ -1,23 +1,23 @@
 extern crate proc_macro;
-extern crate proc_macro2;
 extern crate syn;
-#[macro_use]
 extern crate quote;
 extern crate heck;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
-use syn::{DeriveInput, Ident, Type, Attribute, Fields, Meta};
-use quote::ToTokens;
+use syn::{
+    DeriveInput, Ident, Type, Attribute, Fields, Meta,
+    export::{Span, TokenStream2}
+};
+use quote::{quote, ToTokens};
 use heck::CamelCase;
 
-#[proc_macro_derive(FieldType, attributes(field_enums, field_type, field_enums_derive, field_type_derive))]
+#[proc_macro_derive(FieldType, attributes(field_types, field_type, field_types_derive, field_type_derive))]
 pub fn field_type(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = &ast.ident;
     let vis = &ast.vis;
     let enum_ty = Ident::new(&(ty.to_string() + "FieldType"), Span::call_site());
-    let derive = get_enum_derive(&ast.attrs, &["field_enums_derive", "field_type_derive"], quote! {});
+    let derive = get_enum_derive(&ast.attrs, &["field_types_derive", "field_type_derive"], quote! {});
 
     let fields = filter_fields(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
@@ -66,13 +66,13 @@ pub fn field_type(input: TokenStream) -> TokenStream {
     tokens.into()
 }
 
-#[proc_macro_derive(FieldName, attributes(field_enums, field_name, field_enums_derive, field_name_derive))]
+#[proc_macro_derive(FieldName, attributes(field_types, field_name, field_types_derive, field_name_derive))]
 pub fn field_name(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = &ast.ident;
     let vis = &ast.vis;
     let enum_ty = Ident::new(&(ty.to_string() + "FieldName"), Span::call_site());
-    let derive = get_enum_derive(&ast.attrs, &["field_enums_derive", "field_name_derive"],
+    let derive = get_enum_derive(&ast.attrs, &["field_types_derive", "field_name_derive"],
                             quote! { #[derive(Debug, PartialEq, Eq, Clone, Copy)] });
 
     let fields = filter_fields(match ast.data {
@@ -166,7 +166,7 @@ fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ide
     fields.iter()
         .filter_map(|field| {
             if field.attrs.iter()
-                .find(|attr| has_skip_attr(attr, &["field_enums", skip_attr_name]))
+                .find(|attr| has_skip_attr(attr, &["field_types", skip_attr_name]))
                 .is_none() && field.ident.is_some()
             {
                 let field_ty = field.ty.clone();

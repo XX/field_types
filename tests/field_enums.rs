@@ -1,21 +1,22 @@
 #![allow(dead_code)]
 
-#[macro_use]
-extern crate field_enums;
+extern crate field_types;
+
+use field_types::{FieldType, FieldName};
 
 #[derive(FieldType, FieldName)]
-#[field_enums_derive(Debug, Clone, PartialEq)]
+#[field_types_derive(Debug, Clone, PartialEq)]
 struct Test {
     first: i32,
     second_field: Option<String>,
-    #[field_enums(skip)]
+    #[field_types(skip)]
     third: bool,
-    #[field_enums = "skip"]
+    #[field_types = "skip"]
     fourth: bool,
 }
 
 #[test]
-fn full_field_enums_variants() {
+fn full_field_types_variants() {
     let _field = TestFieldType::First(2);
     let field = TestFieldType::SecondField(None);
     match field {
@@ -32,7 +33,7 @@ fn full_field_enums_variants() {
 }
 
 #[test]
-fn derive_field_enums() {
+fn derive_field_types() {
     let field = TestFieldType::First(1).clone();
     assert_eq!(TestFieldType::First(1), field);
     assert_ne!(TestFieldType::First(2), field);
@@ -51,7 +52,7 @@ fn derive_field_enums() {
 }
 
 #[test]
-fn into_field_enums() {
+fn into_field_types() {
     let test = Test {
         first: 1,
         second_field: Some("test".to_string()),
