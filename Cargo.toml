@@ -1,6 +1,6 @@
 [package]
 name = "field_types"
-version = "0.2.0"
+version = "1.0.0"
 authors = ["XX <freecoder.xx@gmail.com>"]
 
 [dependencies]

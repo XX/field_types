@@ -15,6 +15,19 @@ struct Test {
 }
 
 #[derive(FieldName)]
+#[field_name_derive(Debug, Clone, PartialEq)]
+struct TestGen<'a, T: 'a, U>
+    where U: 'a
+{
+    first: T,
+    second_field: Option<&'a U>,
+    #[field_name(skip)]
+    third: &'a T,
+    #[field_types = "skip"]
+    fourth: U,
+}
+
+#[derive(FieldName)]
 #[field_types_derive(Debug, Clone, PartialEq)]
 struct TestTypesDerive {
     first: i32,
@@ -35,6 +48,13 @@ fn full_field_name_variants() {
     match field {
         TestFieldName::First => (),
         TestFieldName::SecondField => (),
+    }
+
+    let _field = TestGenFieldName::First;
+    let field = TestGenFieldName::SecondField;
+    match field {
+        TestGenFieldName::First => (),
+        TestGenFieldName::SecondField => (),
     }
 
     let _field = TestTypesDeriveFieldName::First;
@@ -58,6 +78,10 @@ fn derive_field_name() {
     assert_eq!(TestFieldName::First, name);
     assert_ne!(TestFieldName::SecondField, name);
 
+    let name = TestGenFieldName::First;
+    assert_eq!(TestGenFieldName::First, name);
+    assert_ne!(TestGenFieldName::SecondField, name);
+
     let name = TestTypesDeriveFieldName::First.clone();
     assert_eq!(TestTypesDeriveFieldName::First, name);
     assert_ne!(TestTypesDeriveFieldName::Second, name);
@@ -78,6 +102,19 @@ fn into_field_name() {
     let fields: [TestFieldName; 2] = (&test).into();
     assert!(match fields {
         [TestFieldName::First, TestFieldName::SecondField] => true,
+        _ => false,
+    });
+
+    let message = "test".to_string();
+    let test = TestGen {
+        first: 1,
+        second_field: Some(&message),
+        third: &2,
+        fourth: message.clone(),
+    };
+    let fields: [TestGenFieldName; 2] = (&test).into();
+    assert!(match fields {
+        [TestGenFieldName::First, TestGenFieldName::SecondField] => true,
         _ => false,
     });
 

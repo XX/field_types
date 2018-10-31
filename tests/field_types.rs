@@ -11,17 +11,32 @@ struct Test {
     second_field: Option<String>,
     #[field_types(skip)]
     third: bool,
-    #[field_types = "skip"]
+    #[field_name = "skip"]
     fourth: bool,
+}
+
+#[derive(FieldType, FieldName)]
+#[field_types_derive(Debug, Clone, PartialEq)]
+struct TestGen<'a, T: 'a, U>
+    where U: 'a
+{
+    first: T,
+    second_field: Option<&'a U>,
+    #[field_types(skip)]
+    third: &'a T,
+    #[field_name = "skip"]
+    fourth: U,
 }
 
 #[test]
 fn full_field_types_variants() {
     let _field = TestFieldType::First(2);
+    let _field = TestFieldType::Fourth(false);
     let field = TestFieldType::SecondField(None);
     match field {
         TestFieldType::First(_) => (),
         TestFieldType::SecondField(_) => (),
+        TestFieldType::Fourth(_) => (),
     }
 
     let _field = TestFieldName::First;
@@ -30,6 +45,22 @@ fn full_field_types_variants() {
         TestFieldName::First => (),
         TestFieldName::SecondField => (),
     }
+
+    let _field = TestGenFieldType::First::<_, bool>(2);
+    let _field = TestGenFieldType::Fourth::<i32, _>(false);
+    let field = TestGenFieldType::SecondField::<i32, bool>(None);
+    match field {
+        TestGenFieldType::First(_) => (),
+        TestGenFieldType::SecondField(_) => (),
+        TestGenFieldType::Fourth(_) => (),
+    }
+
+    let _field = TestGenFieldName::First;
+    let field = TestGenFieldName::SecondField;
+    match field {
+        TestGenFieldName::First => (),
+        TestGenFieldName::SecondField => (),
+    }
 }
 
 #[test]
@@ -37,6 +68,12 @@ fn derive_field_types() {
     let field = TestFieldType::First(1).clone();
     assert_eq!(TestFieldType::First(1), field);
     assert_ne!(TestFieldType::First(2), field);
+
+    let first_field = TestGenFieldType::First::<_, &str>(2);
+    let second_field = TestGenFieldType::SecondField::<i32, &str>(None);
+    assert_ne!(first_field, second_field);
+    assert_eq!(first_field, first_field.clone());
+    assert_eq!("First(2)", format!("{:?}", first_field));
 
     let field = TestFieldType::SecondField(Some("test".to_string())).clone();
     assert_eq!(TestFieldType::SecondField(Some("test".to_string())), field);
@@ -59,9 +96,9 @@ fn into_field_types() {
         third: true,
         fourth: true,
     };
-    let fields: [TestFieldType; 2] = test.into();
+    let fields: [TestFieldType; 3] = test.into();
     assert!(match fields {
-        [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
+        [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s)), TestFieldType::Fourth(true)] if s == "test" => true,
         _ => false,
     });
 
@@ -74,6 +111,32 @@ fn into_field_types() {
     let names: [TestFieldName; 2] = (&test).into();
     assert!(match names {
         [TestFieldName::First, TestFieldName::SecondField] => true,
+        _ => false,
+    });
+
+    let message = "test".to_string();
+
+    let test = TestGen {
+        first: 1,
+        second_field: Some(&message),
+        third: &2,
+        fourth: message.clone(),
+    };
+    let fields: [TestGenFieldType<i32, String>; 3] = test.into();
+    assert!(match fields {
+        [TestGenFieldType::First(1), TestGenFieldType::SecondField(Some(s)), TestGenFieldType::Fourth(_)] if s == &message => true,
+        _ => false,
+    });
+
+    let test = TestGen {
+        first: 1,
+        second_field: Some(&message),
+        third: &2,
+        fourth: message.clone(),
+    };
+    let fields: [TestGenFieldName; 2] = (&test).into();
+    assert!(match fields {
+        [TestGenFieldName::First, TestGenFieldName::SecondField] => true,
         _ => false,
     });
 }
