@@ -1,3 +1,70 @@
+/*!
+This crate provides `FieldName` and `FieldType` derive macros for deriving enums, corresponding to the fields of structs.
+
+## Features
+
+* `..FieldName` enum
+    * Variants with UpperCamelCase unit type names corresponding to the snake_case field names of the struct
+    * Skipping fields with `#[field_name(skip)]` or `#[field_types(skip)]` attributes
+    * Specifying some derives for generated enums with `#[field_name_derive(..)]` or `#[field_types_derive(..)]` structure attributes.
+By default, `..FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Copy`.
+    * `From`/`Into` convert the struct reference to an array of variants
+    * `name`/`by_name` methods for convert enum variants to/from string representation field names
+* `..FieldType` enum
+    * Variants with UpperCamelCase type names corresponding to the snake_case field names of the struct
+and with values corresponding to the value types of the struct fields
+    * Skipping fields with `#[field_type(skip)]` or `#[field_types(skip)]` attributes
+    * Specifying some derives for generated enums with `#[field_type_derive(..)]` or `#[field_types_derive(..)]` structure attributes
+    * `Into` convert the struct into an array of variants with field values
+
+## Example
+
+```rust
+extern crate field_types;
+
+use field_types::{FieldName, FieldType};
+
+#[derive(FieldName, FieldType)]
+struct Test {
+    first: i32,
+    second_field: Option<String>,
+    #[field_types(skip)]
+    third: bool,
+}
+
+fn main() {
+    assert_eq!(TestFieldName::First.name(), "first");
+    assert_eq!(TestFieldName::SecondField.name(), "second_field");
+
+    assert_eq!(Some(TestFieldName::First), TestFieldName::by_name("first"));
+    assert_eq!(Some(TestFieldName::SecondField), TestFieldName::by_name("second_field"));
+    assert_eq!(None, TestFieldName::by_name("third"));
+
+    let test = Test {
+        first: 1,
+        second_field: Some("test".to_string()),
+        third: true,
+    };
+    let fields: [TestFieldType; 2] = test.into();
+    assert!(match fields {
+        [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
+        _ => false,
+    });
+}
+```
+
+## Usage
+
+If you're using Cargo, just add it to your Cargo.toml:
+
+```toml
+[dependencies]
+field_types = "*"
+```
+
+Use `FieldName` and/or `FieldType` in `derive` struct attribute.
+!*/
+
 extern crate proc_macro;
 extern crate syn;
 extern crate quote;

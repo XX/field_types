@@ -1,5 +1,8 @@
 # Field Types
 
+[![Crates.io](https://img.shields.io/crates/v/field_types.svg)](https://crates.io/crates/field_types)
+[![Docs](https://docs.rs/field_types/badge.svg)](https://docs.rs/field_types)
+
 This crate provides `FieldName` and `FieldType` derive macros for deriving `StructFieldName` and `StructFieldType` enums for any struct `Struct` with some fields.
 
 The `..FieldName` enum contains unit types with names corresponding to the names of the structure fields.
@@ -72,9 +75,9 @@ struct Test {
 
 By default, `FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Copy`. More usage examples see in [tests](tests) directory.
 
-## Installation
+## Usage
 
-If you're using Cargo, just add `field_types` to your Cargo.toml:
+If you're using Cargo, just add it to your Cargo.toml:
 
 ```toml
 [dependencies]
