@@ -1,6 +1,11 @@
 # Field Types
 
-`FieldName` usage example:
+This crate provides `FieldName` and `FieldType` derive macros for deriving `StructFieldName` and `StructFieldType` enums for any struct `Struct` with some fields.
+
+The `..FieldName` enum contains unit types with names corresponding to the names of the structure fields.
+Additionally, you can get static string representation of a field name with `name` method and get `..FieldName` variant by string with `by_name` method.
+
+The `FieldName` usage example:
 
 ```rust
 use field_types::FieldName;
@@ -21,7 +26,10 @@ assert_eq!(Some(TestFieldName::SecondField), TestFieldName::by_name("second_fiel
 assert_eq!(None, TestFieldName::by_name("third"));
 ```
 
-`FieldType` usage example:
+The `..FieldType` enum contains some types with names corresponding to the names of the structure fields and
+with values corresponding to the value types of the structure fields.
+
+The `FieldType` usage example:
 
 ```rust
 use field_types::FieldType;
@@ -45,3 +53,34 @@ assert!(match fields {
     _ => false,
 });
 ```
+
+In both cases you can skip fields with `#[attr(skip)]` or `#[attr = "skip"]` field attributes, where `attr` is `field_name` for `FieldName`, `field_type` for `FieldType` or `field_types` for any field type derives.
+You can also specifying some derives for generated enums with `#[attr_derive(..)]` structure attribute, where `attr_derive` is `field_name_derive`, `field_type_derive` or `field_types_derive`. For example:
+
+```rust
+#[derive(FieldType, FieldName)]
+#[field_types_derive(Debug, Clone, PartialEq)]
+struct Test {
+    first: i32,
+    second: Option<String>,
+    #[field_types(skip)]
+    third: bool,
+    #[field_name = "skip"]
+    fourth: bool,
+}
+```
+
+By default, `FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Copy`. More usage examples see in [tests](tests) directory.
+
+## Installation
+
+If you're using Cargo, just add `field_types` to your Cargo.toml:
+
+```toml
+[dependencies]
+field_types = "*"
+```
+
+## License
+
+MIT
