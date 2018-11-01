@@ -1,6 +1,6 @@
 [package]
 name = "field_types"
-version = "1.0.1"
+version = "1.0.2"
 description = "Some derive macros for deriving enums, corresponding to the fields of structs."
 readme = "README.md"
 repository = "https://github.com/XX/field_types"
