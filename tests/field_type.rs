@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
+extern crate variant_count;
 extern crate field_types;
 
+use variant_count::VariantCount;
 use field_types::FieldType;
 
 #[derive(FieldType)]
@@ -15,7 +17,7 @@ struct Test {
 }
 
 #[derive(FieldType)]
-#[field_type_derive(Debug, Clone, PartialEq)]
+#[field_type_derive(VariantCount, Debug, Clone, PartialEq)]
 struct TestGen<'a, T: 'a, U>
     where U: 'a
 {
@@ -28,14 +30,14 @@ struct TestGen<'a, T: 'a, U>
 }
 
 #[derive(FieldType)]
-#[field_types_derive(Debug, Clone, PartialEq)]
+#[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
 struct TestTypesDerive {
     first: i32,
     second: bool,
 }
 
 #[derive(FieldType)]
-#[field_type_derive(Debug, Clone, PartialEq)]
+#[field_type_derive(VariantCount, Debug, Clone, PartialEq)]
 struct TestTypeDerive {
     first: i32,
     second: bool,
@@ -121,7 +123,7 @@ fn into_field_type() {
         third: &2,
         fourth: message.clone(),
     };
-    let fields: [TestGenFieldType<i32, String>; 2] = test.into();
+    let fields: [TestGenFieldType<i32, String>; TestGenFieldType::<i32, String>::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestGenFieldType::First(1), TestGenFieldType::SecondField(Some(s))] if s == &message => true,
         _ => false,
@@ -131,7 +133,7 @@ fn into_field_type() {
         first: 1,
         second: true,
     };
-    let fields: [TestTypesDeriveFieldType; 2] = test.into();
+    let fields: [TestTypesDeriveFieldType; TestTypesDeriveFieldType::VARIANT_COUNT] = test.into();
     assert_eq!(TestTypesDeriveFieldType::First(1), fields[0]);
     assert_eq!(TestTypesDeriveFieldType::Second(true), fields[1]);
 }

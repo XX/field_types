@@ -36,8 +36,10 @@ The `FieldType` usage example:
 
 ```rust
 use field_types::FieldType;
+use variant_count::VariantCount;
 
 #[derive(FieldType)]
+#[field_type_derive(VariantCount)]
 struct Test {
     first: i32,
     second_field: Option<String>,
@@ -50,7 +52,7 @@ let test = Test {
     second_field: Some("test".to_string()),
     third: true,
 };
-let fields: [TestFieldType; 2] = test.into();
+let fields: [TestFieldType; TestFieldType::VARIANT_COUNT] = test.into();
 assert!(match fields {
     [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
     _ => false,
@@ -62,7 +64,7 @@ You can also specifying some derives for generated enums with `#[attr_derive(..)
 
 ```rust
 #[derive(FieldType, FieldName)]
-#[field_types_derive(Debug, Clone, PartialEq)]
+#[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
 struct Test {
     first: i32,
     second: Option<String>,

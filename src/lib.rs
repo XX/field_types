@@ -3,28 +3,34 @@ This crate provides `FieldName` and `FieldType` derive macros for deriving enums
 
 ## Features
 
-* `..FieldName` enum
-    * Variants with UpperCamelCase unit type names corresponding to the snake_case field names of the struct
-    * Skipping fields with `#[field_name(skip)]` or `#[field_types(skip)]` attributes
-    * Specifying some derives for generated enums with `#[field_name_derive(..)]` or `#[field_types_derive(..)]` structure attributes.
+### `..FieldName` enum
+
+ * Variants with UpperCamelCase unit type names corresponding to the snake_case field names of the struct
+ * Skipping fields with `#[field_name(skip)]` or `#[field_types(skip)]` attributes
+ * Specifying some derives for generated enums with `#[field_name_derive(..)]` or `#[field_types_derive(..)]` structure attributes.
 By default, `..FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Copy`.
-    * `From`/`Into` convert the struct reference to an array of variants
-    * `name`/`by_name` methods for convert enum variants to/from string representation field names
-* `..FieldType` enum
-    * Variants with UpperCamelCase type names corresponding to the snake_case field names of the struct
+ * `From`/`Into` convert the struct reference to an array of variants
+ * `name`/`by_name` methods for convert enum variants to/from string representation field names
+
+### `..FieldType` enum
+
+ * Variants with UpperCamelCase type names corresponding to the snake_case field names of the struct
 and with values corresponding to the value types of the struct fields
-    * Skipping fields with `#[field_type(skip)]` or `#[field_types(skip)]` attributes
-    * Specifying some derives for generated enums with `#[field_type_derive(..)]` or `#[field_types_derive(..)]` structure attributes
-    * `Into` convert the struct into an array of variants with field values
+ * Skipping fields with `#[field_type(skip)]` or `#[field_types(skip)]` attributes
+ * Specifying some derives for generated enums with `#[field_type_derive(..)]` or `#[field_types_derive(..)]` structure attributes
+ * `Into` convert the struct into an array of variants with field values
 
 ## Example
 
 ```rust
+extern crate variant_count;
 extern crate field_types;
 
+use variant_count::VariantCount;
 use field_types::{FieldName, FieldType};
 
 #[derive(FieldName, FieldType)]
+#[field_type_derive(VariantCount)]
 struct Test {
     first: i32,
     second_field: Option<String>,
@@ -45,7 +51,7 @@ fn main() {
         second_field: Some("test".to_string()),
         third: true,
     };
-    let fields: [TestFieldType; 2] = test.into();
+    let fields: [TestFieldType; TestFieldType::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
         _ => false,

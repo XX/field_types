@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
+extern crate variant_count;
 extern crate field_types;
 
+use variant_count::VariantCount;
 use field_types::{FieldType, FieldName};
 
 #[derive(FieldType, FieldName)]
-#[field_types_derive(Debug, Clone, PartialEq)]
+#[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
 struct Test {
     first: i32,
     second_field: Option<String>,
@@ -16,7 +18,7 @@ struct Test {
 }
 
 #[derive(FieldType, FieldName)]
-#[field_types_derive(Debug, Clone, PartialEq)]
+#[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
 struct TestGen<'a, T: 'a, U>
     where U: 'a
 {
@@ -96,7 +98,7 @@ fn into_field_types() {
         third: true,
         fourth: true,
     };
-    let fields: [TestFieldType; 3] = test.into();
+    let fields: [TestFieldType; TestFieldType::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s)), TestFieldType::Fourth(true)] if s == "test" => true,
         _ => false,
@@ -108,7 +110,7 @@ fn into_field_types() {
         third: true,
         fourth: true,
     };
-    let names: [TestFieldName; 2] = (&test).into();
+    let names: [TestFieldName; TestFieldName::VARIANT_COUNT] = (&test).into();
     assert!(match names {
         [TestFieldName::First, TestFieldName::SecondField] => true,
         _ => false,
@@ -122,7 +124,7 @@ fn into_field_types() {
         third: &2,
         fourth: message.clone(),
     };
-    let fields: [TestGenFieldType<i32, String>; 3] = test.into();
+    let fields: [TestGenFieldType<i32, String>; TestGenFieldType::<i32, String>::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestGenFieldType::First(1), TestGenFieldType::SecondField(Some(s)), TestGenFieldType::Fourth(_)] if s == &message => true,
         _ => false,
@@ -134,7 +136,7 @@ fn into_field_types() {
         third: &2,
         fourth: message.clone(),
     };
-    let fields: [TestGenFieldName; 2] = (&test).into();
+    let fields: [TestGenFieldName; TestGenFieldName::VARIANT_COUNT] = (&test).into();
     assert!(match fields {
         [TestGenFieldName::First, TestGenFieldName::SecondField] => true,
         _ => false,
