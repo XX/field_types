@@ -9,7 +9,7 @@ readme = "README.md"
 documentation = "https://docs.rs/field_types"
 
 repository = "https://github.com/XX/field_types"
-keywords = ["struct", "field", "type", "name", "enum", "derive"]
+keywords = ["struct", "field", "type", "name", "enum"]
 categories = ["rust-patterns"]
 
 [dependencies]
