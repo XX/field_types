@@ -27,6 +27,9 @@ assert_eq!(TestFieldName::SecondField.name(), "second_field");
 assert_eq!(Some(TestFieldName::First), TestFieldName::by_name("first"));
 assert_eq!(Some(TestFieldName::SecondField), TestFieldName::by_name("second_field"));
 assert_eq!(None, TestFieldName::by_name("third"));
+
+let fields = Test::as_field_name_array();
+assert_eq!([TestFieldName::First, TestFieldName::SecondField], fields);
 ```
 
 The `..FieldType` enum contains some types with names corresponding to the names of the structure fields and
@@ -52,7 +55,11 @@ let test = Test {
     second_field: Some("test".to_string()),
     third: true,
 };
+
 let fields: [TestFieldType; TestFieldType::VARIANT_COUNT] = test.into();
+// or
+// let fields = test.into_field_type_array();
+
 assert!(match fields {
     [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
     _ => false,

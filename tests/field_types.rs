@@ -17,18 +17,45 @@ struct Test {
     fourth: bool,
 }
 
-#[derive(FieldType, FieldName)]
-#[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
-struct TestGen<'a, T: 'a, U>
-    where U: 'a
-{
-    first: T,
-    second_field: Option<&'a U>,
-    #[field_types(skip)]
-    third: &'a T,
-    #[field_name = "skip"]
-    fourth: U,
+impl Test {
+    fn foo() -> bool {
+        true
+    }
 }
+
+mod bar {
+    use variant_count::VariantCount;
+    use field_types::{FieldType, FieldName};
+
+    #[derive(FieldType, FieldName)]
+    #[field_types_derive(VariantCount, Debug, Clone, PartialEq)]
+    pub struct TestGen<'a, T: 'a, U>
+        where U: 'a
+    {
+        first: T,
+        second_field: Option<&'a U>,
+        #[field_types(skip)]
+        third: &'a T,
+        #[field_name = "skip"]
+        fourth: U,
+    }
+
+    impl<'a, T: 'a, U> TestGen<'a, T, U>
+        where U: 'a
+    {
+        pub fn new(first: T, second: &'a U, third: &'a T, fourth: U) -> Self {
+            let second_field = Some(second);
+            TestGen {
+                first,
+                second_field,
+                third,
+                fourth,
+            }
+        }
+    }
+}
+
+use bar::{TestGen, TestGenFieldType, TestGenFieldName};
 
 #[test]
 fn full_field_types_variants() {
@@ -118,24 +145,27 @@ fn into_field_types() {
 
     let message = "test".to_string();
 
-    let test = TestGen {
-        first: 1,
-        second_field: Some(&message),
-        third: &2,
-        fourth: message.clone(),
-    };
+    let test = TestGen::new(1, &message, &2, message.clone());
+    let fields = test.into_field_type_array();
+    assert!(match fields {
+        [TestGenFieldType::First(1), TestGenFieldType::SecondField(Some(s)), TestGenFieldType::Fourth(_)] if s == &message => true,
+        _ => false,
+    });
+
+    let test = TestGen::new(1, &message, &2, message.clone());
     let fields: [TestGenFieldType<i32, String>; TestGenFieldType::<i32, String>::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestGenFieldType::First(1), TestGenFieldType::SecondField(Some(s)), TestGenFieldType::Fourth(_)] if s == &message => true,
         _ => false,
     });
 
-    let test = TestGen {
-        first: 1,
-        second_field: Some(&message),
-        third: &2,
-        fourth: message.clone(),
-    };
+    let fields = TestGen::<'_, i32, String>::as_field_name_array();
+    assert!(match fields {
+        [TestGenFieldName::First, TestGenFieldName::SecondField] => true,
+        _ => false,
+    });
+
+    let test = TestGen::new(1, &message, &2, message.clone());
     let fields: [TestGenFieldName; TestGenFieldName::VARIANT_COUNT] = (&test).into();
     assert!(match fields {
         [TestGenFieldName::First, TestGenFieldName::SecondField] => true,

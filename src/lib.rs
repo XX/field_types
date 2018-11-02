@@ -9,6 +9,7 @@ This crate provides `FieldName` and `FieldType` derive macros for deriving enums
  * Skipping fields with `#[field_name(skip)]` or `#[field_types(skip)]` attributes
  * Specifying some derives for generated enums with `#[field_name_derive(..)]` or `#[field_types_derive(..)]` structure attributes.
 By default, `..FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Copy`.
+ * Associated function `as_field_name_array` that returns array of variants
  * `From`/`Into` convert the struct reference to an array of variants
  * `name`/`by_name` methods for convert enum variants to/from string representation field names
 
@@ -18,6 +19,7 @@ By default, `..FieldName` has derive `Debug`, `PartialEq`, `Eq`, `Clone` and `Co
 and with values corresponding to the value types of the struct fields
  * Skipping fields with `#[field_type(skip)]` or `#[field_types(skip)]` attributes
  * Specifying some derives for generated enums with `#[field_type_derive(..)]` or `#[field_types_derive(..)]` structure attributes
+ * Associated function `into_field_type_array` that convert the struct into an array of variants with field values
  * `Into` convert the struct into an array of variants with field values
 
 ## Example
@@ -46,11 +48,27 @@ fn main() {
     assert_eq!(Some(TestFieldName::SecondField), TestFieldName::by_name("second_field"));
     assert_eq!(None, TestFieldName::by_name("third"));
 
+    let fields = Test::as_field_name_array();
+    assert_eq!([TestFieldName::First, TestFieldName::SecondField], fields);
+
     let test = Test {
         first: 1,
         second_field: Some("test".to_string()),
         third: true,
     };
+
+    let fields = test.into_field_type_array();
+    assert!(match fields {
+        [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
+        _ => false,
+    });
+
+    let test = Test {
+        first: 1,
+        second_field: Some("test".to_string()),
+        third: true,
+    };
+
     let fields: [TestFieldType; TestFieldType::VARIANT_COUNT] = test.into();
     assert!(match fields {
         [TestFieldType::First(1), TestFieldType::SecondField(Some(ref s))] if s == "test" => true,
@@ -79,7 +97,7 @@ extern crate heck;
 use std::iter::FromIterator;
 use proc_macro::TokenStream;
 use syn::{
-    DeriveInput, Ident, Type, Generics, Attribute, Fields, Meta,
+    DeriveInput, Ident, Type, Attribute, Fields, Meta,
     export::{Span, TokenStream2}
 };
 use quote::{quote, ToTokens};
@@ -101,8 +119,6 @@ pub fn field_type(input: TokenStream) -> TokenStream {
         panic!("FieldType can only be derived for non-empty structures");
     }
 
-    let converter = get_type_converter(ty, &generics, &enum_ty, &fields);
-
     let field_type_variants = fields.iter()
         .map(|(_, field_ty, variant_ident)| {
             quote! {
@@ -110,14 +126,68 @@ pub fn field_type(input: TokenStream) -> TokenStream {
             }
         });
 
-    let where_clause = generics.where_clause.as_ref();
+    let field_type_constructs = fields.iter()
+        .map(|(field_ident, _, variant_ident)| {
+            quote! {
+                #enum_ty::#variant_ident(#field_ident)
+            }
+        });
+
+    let from_field_type_constructs = field_type_constructs.clone();
+
+    let fields_idents = fields.iter()
+        .map(|(field_ident, _, _)| {
+            quote! {
+                #field_ident
+            }
+        });
+
+    let destructuring = quote! { #ty { #(#fields_idents,)* .. } };
+
+    let fields_count = fields.len();
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let converter = if generics.params.is_empty() {
+        quote! {
+            impl From<#ty> for [#enum_ty; #fields_count] {
+                fn from(source: #ty) -> Self {
+                    let #destructuring = source;
+                    [#(#from_field_type_constructs),*]
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl #impl_generics Into<[#enum_ty #ty_generics; #fields_count]> for #ty #ty_generics
+                #where_clause
+            {
+                fn into(self) -> [#enum_ty #ty_generics; #fields_count] {
+                    let #destructuring = self;
+                    [#(#from_field_type_constructs),*]
+                }
+            }
+        }
+    };
+
     let tokens = quote! {
         #derive
-        #vis enum #enum_ty #generics #where_clause {
+        #vis enum #enum_ty #generics
+            #where_clause
+        {
             #(#field_type_variants),*
         }
 
         #converter
+
+        impl #impl_generics #ty #ty_generics
+            #where_clause
+        {
+            #vis fn into_field_type_array(self) -> [#enum_ty #ty_generics; #fields_count] {
+                let #destructuring = self;
+                [#(#field_type_constructs),*]
+            }
+        }
     };
     tokens.into()
 }
@@ -168,9 +238,11 @@ pub fn field_name(input: TokenStream) -> TokenStream {
             }
         });
 
+    let from_field_name_constructs = field_name_constructs.clone();
+
     let fields_count = fields.len();
 
-    let (impl_generics, ty_generics, _where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let from_lifetime = quote! { 'field_name_from_lifetime__ };
 
     let mut impl_generics_tokens = TokenStream2::new();
@@ -206,9 +278,17 @@ pub fn field_name(input: TokenStream) -> TokenStream {
             }
         }
 
+        impl #impl_generics #ty #ty_generics
+            #where_clause
+        {
+            #vis fn as_field_name_array() -> [#enum_ty; #fields_count] {
+                [#(#field_name_constructs),*]
+            }
+        }
+
         impl #impl_generics_tokens From<& #from_lifetime #ty #ty_generics> for [#enum_ty; #fields_count] {
             fn from(_source: & #from_lifetime #ty #ty_generics) -> Self {
-                [#(#field_name_constructs),*]
+                [#(#from_field_name_constructs),*]
             }
         }
     };
@@ -233,46 +313,6 @@ fn get_enum_derive(attrs: &[Attribute], derive_attr_names: &[&str], default: Tok
         .next()
         .map(|meta_list| quote! { #[#meta_list] })
         .unwrap_or(default)
-}
-
-fn get_type_converter(ty: &Ident, generics: &Generics, enum_ty: &Ident, fields: &Vec<(Ident, Type, Ident)>) -> TokenStream2 {
-    let fields_idents = fields.iter()
-        .map(|(field_ident, _, _)| {
-            quote! {
-                #field_ident
-            }
-        });
-
-    let field_type_constructs = fields.iter()
-        .map(|(field_ident, _, variant_ident)| {
-            quote! {
-                #enum_ty::#variant_ident(#field_ident)
-            }
-        });
-
-    let fields_count = fields.len();
-    if generics.params.is_empty() {
-        quote! {
-            impl From<#ty> for [#enum_ty; #fields_count] {
-                fn from(source: #ty) -> Self {
-                    let #ty { #(#fields_idents,)* .. } = source;
-                    [#(#field_type_constructs),*]
-                }
-            }
-        }
-    } else {
-        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-        quote! {
-            impl #impl_generics Into<[#enum_ty #ty_generics; #fields_count]> for #ty #ty_generics
-                #where_clause
-            {
-                fn into(self) -> [#enum_ty #ty_generics; #fields_count] {
-                    let #ty { #(#fields_idents,)* .. } = self;
-                    [#(#field_type_constructs),*]
-                }
-            }
-        }
-    }
 }
 
 fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ident)> {
