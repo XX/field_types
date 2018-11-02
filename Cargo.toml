@@ -1,6 +1,6 @@
 [package]
 name = "field_types"
-version = "1.0.3"
+version = "1.1.0"
 authors = ["Alexander Mescheryakov <freecoder.xx@gmail.com>"]
 license = "MIT"
 
