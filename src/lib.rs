@@ -97,8 +97,9 @@ extern crate heck;
 use std::iter::FromIterator;
 use proc_macro::TokenStream;
 use syn::{
-    DeriveInput, Ident, Type, Attribute, Fields, Meta,
-    export::{Span, TokenStream2}
+    DeriveInput, Ident, Type, Attribute, Fields, Meta, Path, PathArguments, PathSegment,
+    export::{Span, TokenStream2},
+    punctuated::Punctuated,
 };
 use quote::{quote, ToTokens};
 use heck::CamelCase;
@@ -297,12 +298,26 @@ pub fn field_name(input: TokenStream) -> TokenStream {
 
 fn get_enum_derive(attrs: &[Attribute], derive_attr_names: &[&str], default: TokenStream2) -> TokenStream2 {
     attrs.iter()
-        .filter_map(|attr| attr.interpret_meta()
+        .filter_map(|attr| attr.parse_meta()
+            .ok()
             .and_then(|meta| {
                 for attr_name in derive_attr_names {
-                    if meta.name() == attr_name {
-                        if let Meta::List(mut meta_list) = meta {
-                            meta_list.ident = Ident::new("derive", Span::call_site());
+                    let attr_ident = Some(Ident::new(attr_name, Span::call_site()));
+                    let ident = meta.path().get_ident();
+                    if ident == attr_ident.as_ref() {
+                        if let Meta::List(meta_list) = &meta {
+                            let mut meta_list = meta_list.clone();
+                            meta_list.path = Path {
+                                leading_colon: None,
+                                segments: {
+                                    let mut segments = Punctuated::new();
+                                    segments.push(PathSegment {
+                                        ident: Ident::new("derive", Span::call_site()),
+                                        arguments: PathArguments::None,
+                                    });
+                                    segments
+                                }
+                            };
                             return Some(meta_list);
                         }
                     }
@@ -335,10 +350,13 @@ fn filter_fields(fields: &Fields, skip_attr_name: &str) -> Vec<(Ident, Type, Ide
 }
 
 fn has_skip_attr(attr: &Attribute, attr_names: &[&str]) -> bool {
-    attr.interpret_meta()
+    attr.parse_meta()
+        .ok()
         .and_then(|meta| {
             for attr_name in attr_names {
-                if meta.name() == attr_name {
+                let attr_ident = Some(Ident::new(attr_name, Span::call_site()));
+                let ident = meta.path().get_ident();
+                if ident == attr_ident.as_ref() {
                     return Some(meta);
                 }
             }
@@ -348,7 +366,6 @@ fn has_skip_attr(attr: &Attribute, attr_names: &[&str]) -> bool {
             let value = match meta {
                 Meta::List(ref list) => list.nested.first()
                     .expect("Attribute value can't be empty")
-                    .into_value()
                     .clone()
                     .into_token_stream()
                     .to_string(),
